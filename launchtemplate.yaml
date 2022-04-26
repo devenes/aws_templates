@@ -1,7 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: |
-  This CloudFormation template creates a Security Group, an Auto Scaling Group behind an Application Load Balancer with a Launch Template, a Target Group, a Listener, and a CPU Policy for the Target Group.
+  This CloudFormation template creates a Security Group, 
+  an Auto Scaling Group behind an Application Load Balancer with 
+  a Launch Template, a Target Group, a Listener, and a CPU Policy for the Target Group.
 
 Parameters:
   myVPC:
