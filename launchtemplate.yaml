@@ -40,7 +40,7 @@ Mappings:
       AMI: ami-058b1b7fe545997ae
 
 Resources:
-  myALB:
+  ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       SecurityGroups:
@@ -48,17 +48,17 @@ Resources:
       Subnets: !Ref mySubnets
       Type: application
 
-  myListener:
+  ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref myTargetGroup
-      LoadBalancerArn: !Ref myALB
+          TargetGroupArn: !Ref ServerTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
 
-  myASG:
+  AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AvailabilityZones: !GetAZs
@@ -66,24 +66,24 @@ Resources:
       HealthCheckGracePeriod: 90
       HealthCheckType: ELB
       LaunchTemplate:
-        LaunchTemplateId: !Ref myLaunchTemplate
+        LaunchTemplateId: !Ref ServerLaunchTemplate
         Version: "1"
       MaxSize: "3"
       MinSize: "1"
       TargetGroupARNs:
-        - !Ref myTargetGroup
+        - !Ref ServerTargetGroup
 
-  myCPUPolicy:
+  CPUPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
-      AutoScalingGroupName: !Ref myASG
+      AutoScalingGroupName: !Ref AutoScalingGroup
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 80.0
 
-  myLaunchTemplate:
+  ServerLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
@@ -95,6 +95,11 @@ Resources:
         KeyName: !Ref KeyPair
         SecurityGroupIds:
           - !GetAtt mySecurityGroup.GroupId
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub Web Server of ${AWS::StackName} Stack
         UserData: !Base64 |
           #! /bin/bash
           yum update -y
@@ -119,7 +124,7 @@ Resources:
           systemctl start httpd
           systemctl enable httpd
 
-  myTargetGroup:
+  ServerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 10
@@ -146,9 +151,9 @@ Resources:
       VpcId: !Ref myVPC
 
 Outputs:
-  AppUrl:
-    Description: URL of the ALB
+  ServerURL:
+    Description: Web Server Application Load Balancer URL
     Value: !Join
       - ""
       - - "http://"
-        - !GetAtt myALB.DNSName
+        - !GetAtt ApplicationLoadBalancer.DNSName
