@@ -81,7 +81,7 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 60.0
+        TargetValue: 80.0
 
   myLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
