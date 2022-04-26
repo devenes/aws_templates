@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: |
-  This temp creates an ASG behind an ALB.
+  This CloudFormation template creates a Security Group, an Auto Scaling Group behind an Application Load Balancer with a Launch Template, a Target Group, a Listener, and a CPU Policy for the Target Group.
 
 Parameters:
   myVPC:
@@ -12,11 +12,11 @@ Parameters:
     Description: Select at least 2 subnets
     Type: List<AWS::EC2::Subnet::Id>
 
-  myKP:
+  KeyPair:
     Description: Select your Key
     Type: AWS::EC2::KeyPair::KeyName
 
-  myIT:
+  InstanceType:
     Description: Select instance type
     Type: String
     Default: t2.micro
@@ -44,17 +44,17 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       SecurityGroups:
-        - !GetAtt mySG.GroupId
+        - !GetAtt mySecurityGroup.GroupId
       Subnets: !Ref mySubnets
       Type: application
 
   myListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      DefaultActions: # Required
+      DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref myTG
-      LoadBalancerArn: !Ref myALB # Required
+          TargetGroupArn: !Ref myTargetGroup
+      LoadBalancerArn: !Ref myALB
       Port: 80
       Protocol: HTTP
 
@@ -66,24 +66,24 @@ Resources:
       HealthCheckGracePeriod: 90
       HealthCheckType: ELB
       LaunchTemplate:
-        LaunchTemplateId: !Ref myLT
+        LaunchTemplateId: !Ref myLaunchTemplate
         Version: "1"
-      MaxSize: "3" # Required
-      MinSize: "1" # Required
+      MaxSize: "3"
+      MinSize: "1"
       TargetGroupARNs:
-        - !Ref myTG
+        - !Ref myTargetGroup
 
   myCPUPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
-      AutoScalingGroupName: !Ref myASG # Required
+      AutoScalingGroupName: !Ref myASG
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 60.0
 
-  myLT:
+  myLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
@@ -91,10 +91,10 @@ Resources:
           - RegionImageMap
           - !Ref AWS::Region
           - AMI
-        InstanceType: !Ref myIT
-        KeyName: !Ref myKP
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPair
         SecurityGroupIds:
-          - !GetAtt mySG.GroupId
+          - !GetAtt mySecurityGroup.GroupId
         UserData: !Base64 |
           #! /bin/bash
           yum update -y
@@ -110,7 +110,7 @@ Resources:
               <title> Congratulations! You have created an instance from Launch Template</title>
           </head>
           <body>
-              <h1>This web server is launched from launch template by YOUR_NAME</h1>
+              <h1>This web server is launched from launch template that created by Enes</h1>
               <p>This instance is created at <b>$DATE_TIME</b></p>
               <p>Private IP address of this instance is <b>$PRIVATE_IP</b></p>
               <p>Public IP address of this instance is <b>$PUBLIC_IP</b></p>
@@ -119,7 +119,7 @@ Resources:
           systemctl start httpd
           systemctl enable httpd
 
-  myTG:
+  myTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 10
@@ -130,10 +130,10 @@ Resources:
       UnhealthyThresholdCount: 3
       VpcId: !Ref myVPC
 
-  mySG:
+  mySecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enables SSH and HTTP # Required
+      GroupDescription: Enables SSH and HTTP
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
